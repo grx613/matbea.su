@@ -26,7 +26,13 @@ export default async function handler(req, res) {
       throw new Error("Не удалось получить токен: " + JSON.stringify(loginResp));
     }
 
-    // 2. Отправляем SMS
+    // 2. Генерируем код
+    const code = Math.floor(100000 + Math.random() * 900000);
+
+    // 3. Текст SMS
+    const smsText = `MATBEA. Внимание, никому не сообщайте код!\nКод подтверждения: ${code}`;
+
+    // 4. Отправляем SMS
     const r2 = await fetch("https://online.sigmasms.ru/api/sendings", {
       method: "POST",
       headers: {
@@ -37,14 +43,16 @@ export default async function handler(req, res) {
         recipient: phone,
         type: "sms",
         payload: {
-          sender: process.env.SIGMA_SENDER, // Имя-отправитель из ЛК Sigma
-          text: "Спасибо за регистрацию на Matbea.SU!"
+          sender: process.env.SIGMA_SENDER,
+          text: smsText
         }
       })
     });
 
     const sendResp = await r2.json();
-    res.status(200).json({ ok: true, sigma: sendResp });
+
+    // 5. Возвратим ещё и сам code (на беке сохрани, если нужно контролировать валидацию)
+    res.status(200).json({ ok: true, code, sigma: sendResp });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
